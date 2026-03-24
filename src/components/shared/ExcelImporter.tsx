@@ -1,16 +1,23 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { FileSpreadsheet, Upload, X, AlertTriangle } from "lucide-react";
+import { FileSpreadsheet, Upload, X, AlertTriangle, LoaderCircle } from "lucide-react";
 import { useDashboardStore } from "@/stores/dashboard-store";
 import { parseExcelFile, isExcelFile } from "@/lib/excel-parser";
 
 interface ExcelImporterProps {
   isOpen: boolean;
   onClose: () => void;
+  onImportSuccess?: (count: number) => void;
+  onImportError?: (message: string) => void;
 }
 
-export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
+export function ExcelImporter({
+  isOpen,
+  onClose,
+  onImportSuccess,
+  onImportError,
+}: ExcelImporterProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -20,6 +27,7 @@ export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
   const properties = useDashboardStore((s) => s.properties);
   const setProperties = useDashboardStore((s) => s.setProperties);
   const setIsLoading = useDashboardStore((s) => s.setIsLoading);
+  const isLoading = useDashboardStore((s) => s.isLoading);
 
   const importFile = useCallback(
     async (file: File) => {
@@ -30,18 +38,22 @@ export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
         const buffer = await file.arrayBuffer();
         const parsed = parseExcelFile(buffer);
         setProperties(parsed);
+        onImportSuccess?.(parsed.length);
         onClose();
       } catch (err) {
-        setError(
+        const message =
           err instanceof Error
             ? err.message
-            : "Произошла ошибка при импорте файла"
+            : "Произошла ошибка при импорте файла";
+        setError(
+          message
         );
+        onImportError?.(message);
       } finally {
         setIsLoading(false);
       }
     },
-    [setIsLoading, setProperties, onClose]
+    [setIsLoading, setProperties, onClose, onImportSuccess, onImportError]
   );
 
   const processFile = useCallback(
@@ -49,7 +61,9 @@ export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
       setError(null);
 
       if (!isExcelFile(file)) {
-        setError("Файл не является Excel-таблицей. Поддерживаемый формат: .xlsx");
+        const message = "Файл не является Excel-таблицей. Поддерживаемый формат: .xlsx";
+        setError(message);
+        onImportError?.(message);
         return;
       }
 
@@ -62,7 +76,7 @@ export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
 
       await importFile(file);
     },
-    [properties.length, importFile]
+    [properties.length, importFile, onImportError]
   );
 
   const handleConfirmReplace = useCallback(async () => {
@@ -125,6 +139,7 @@ export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
           <h2 className="text-h2 text-text-primary">Импорт данных</h2>
           <button
             onClick={onClose}
+            disabled={isLoading}
             className="p-1 text-text-tertiary hover:text-text-primary transition-colors duration-fast rounded-sm focus-ring"
           >
             <X className="w-5 h-5" />
@@ -147,15 +162,17 @@ export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
               <div className="flex gap-3 justify-center">
                 <button
                   onClick={handleCancelReplace}
+                  disabled={isLoading}
                   className="px-4 py-2 text-small text-text-secondary border border-border-default rounded-sm hover:bg-hover transition-colors duration-fast focus-ring"
                 >
                   Отмена
                 </button>
                 <button
                   onClick={handleConfirmReplace}
+                  disabled={isLoading}
                   className="px-4 py-2 text-small text-white bg-semantic-danger hover:bg-red-600 rounded-sm transition-colors duration-fast focus-ring"
                 >
-                  Заменить
+                  {isLoading ? "Импорт..." : "Заменить"}
                 </button>
               </div>
             </div>
@@ -165,23 +182,27 @@ export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => !isLoading && fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-all duration-base ${
                 isDragging
                   ? "border-accent-primary bg-accent-primary-muted"
                   : "border-border-default hover:border-border-strong"
-              }`}
+              } ${isLoading ? "pointer-events-none opacity-70" : ""}`}
             >
-              <FileSpreadsheet
-                className={`w-16 h-16 mx-auto mb-4 ${
-                  isDragging ? "text-accent-primary" : "text-text-tertiary"
-                }`}
-              />
+              {isLoading ? (
+                <LoaderCircle className="mx-auto mb-4 h-16 w-16 animate-spin text-accent-primary" />
+              ) : (
+                <FileSpreadsheet
+                  className={`w-16 h-16 mx-auto mb-4 ${
+                    isDragging ? "text-accent-primary" : "text-text-tertiary"
+                  }`}
+                />
+              )}
               <p className="text-body text-text-secondary mb-1">
-                Перетащите Excel-файл
+                {isLoading ? "Импортируем данные..." : "Перетащите Excel-файл"}
               </p>
               <p className="text-body text-text-secondary mb-3">
-                или нажмите для выбора
+                {isLoading ? "Пожалуйста, подождите несколько секунд" : "или нажмите для выбора"}
               </p>
               <p className="text-small text-text-tertiary">.xlsx формат</p>
 
@@ -190,6 +211,7 @@ export function ExcelImporter({ isOpen, onClose }: ExcelImporterProps) {
                 type="file"
                 accept=".xlsx,.xls"
                 onChange={handleFileSelect}
+                disabled={isLoading}
                 className="hidden"
               />
             </div>

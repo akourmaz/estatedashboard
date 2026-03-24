@@ -56,7 +56,11 @@ export function PropertyTable() {
 
   if (isLoading) {
     return (
-      <div className="bg-surface border border-border-subtle rounded-lg overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+        <div className="border-b border-border-subtle px-4 py-4 sm:px-5">
+          <div className="skeleton mb-2 h-5 w-40 rounded-sm" />
+          <div className="skeleton h-4 w-64 rounded-sm" />
+        </div>
         <table className="w-full">
           <thead>
             <tr className="border-b border-border-default">
@@ -109,57 +113,74 @@ export function PropertyTable() {
   }
 
   return (
-    <div className="bg-surface border border-border-subtle rounded-lg overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full" role="grid">
-          <thead className="sticky top-0 z-10">
-            <tr className="border-b border-border-default bg-canvas">
-              {COLUMNS.map((col) => (
-                <th
-                  key={col.key}
-                  className={`px-4 py-3 text-left text-xs uppercase tracking-[0.05em] text-text-tertiary font-medium ${
-                    col.sortable ? "cursor-pointer select-none hover:text-text-secondary" : ""
-                  } transition-colors duration-fast`}
-                  onClick={() => col.sortable && setSort(col.key)}
-                  aria-sort={
-                    sortBy === col.key
-                      ? sortOrder === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : "none"
-                  }
-                >
-                  <div className="flex items-center gap-1">
-                    <span>{col.label}</span>
-                    {col.sortable && (
-                      <SortIcon
-                        column={col.key}
-                        currentSort={sortBy}
-                        currentOrder={sortOrder}
-                      />
-                    )}
-                  </div>
-                </th>
-              ))}
-              <th className="w-10" />
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProperties.map((property, index) => (
-              <PropertyRow
-                key={property.id}
-                property={property}
-                index={index}
-              />
-            ))}
-          </tbody>
-        </table>
+    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-border-subtle px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5">
+        <div>
+          <p className="text-xs uppercase tracking-[0.08em] text-text-tertiary">
+            Property Catalog
+          </p>
+          <h2 className="mt-1 text-h2 text-text-primary">Каталог объектов</h2>
+          <p className="mt-1 text-small text-text-secondary">
+            Раскрывайте строки, чтобы увидеть коммерческие условия, контакты и материалы по каждому проекту.
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-canvas/70 px-3 py-2 text-small text-text-secondary">
+          <span>Результаты</span>
+          <span className="tabular-nums font-semibold text-text-primary">
+            {filteredProperties.length}
+          </span>
+          <span>/</span>
+          <span className="tabular-nums">{properties.length}</span>
+        </div>
       </div>
 
-      {/* Results count */}
+      <table className="w-full" role="grid">
+        <thead className="sticky top-[64px] z-40">
+          <tr className="border-b border-border-default bg-canvas/95 backdrop-blur-header">
+            {COLUMNS.map((col) => (
+              <th
+                key={col.key}
+                className={`px-4 py-3 text-left text-xs uppercase tracking-[0.08em] text-text-tertiary font-medium ${
+                  col.sortable ? "cursor-pointer select-none hover:text-text-secondary" : ""
+                } transition-colors duration-fast`}
+                onClick={() => col.sortable && setSort(col.key)}
+                aria-sort={
+                  sortBy === col.key
+                    ? sortOrder === "asc"
+                      ? "ascending"
+                      : "descending"
+                    : "none"
+                }
+              >
+                <div className="flex items-center gap-1">
+                  <span>{col.label}</span>
+                  {col.sortable && (
+                    <SortIcon
+                      column={col.key}
+                      currentSort={sortBy}
+                      currentOrder={sortOrder}
+                    />
+                  )}
+                </div>
+              </th>
+            ))}
+            <th className="w-10" />
+          </tr>
+        </thead>
+        <tbody>
+          {filteredProperties.map((property, index) => (
+            <PropertyRow
+              key={property.id}
+              property={property}
+              index={index}
+            />
+          ))}
+        </tbody>
+      </table>
+
       <div className="px-4 py-3 border-t border-border-subtle text-small text-text-tertiary">
         Показано {filteredProperties.length} из {properties.length} объектов
       </div>
-    </div>
+    </section>
   );
 }
