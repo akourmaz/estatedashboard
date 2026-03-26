@@ -151,7 +151,7 @@ export function FilterPanel() {
           placeholder="Поиск по объектам…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-9 pr-9 py-2.5 rounded-md bg-surface border border-border-subtle text-body text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-border-accent focus:ring-1 focus:ring-border-accent transition-colors duration-base"
+          className="w-full pl-9 pr-9 py-2.5 rounded-md bg-surface border border-border-subtle text-[16px] sm:text-body text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-border-accent focus:ring-1 focus:ring-border-accent transition-colors duration-base"
           aria-label="Поиск по объектам"
         />
         {searchQuery && (
