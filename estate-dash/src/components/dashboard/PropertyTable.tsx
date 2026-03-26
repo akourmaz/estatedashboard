@@ -38,6 +38,7 @@ function SortIcon({
 
 export function PropertyTable() {
   const filteredProperties = useFilteredProperties();
+  const activePreset = useDashboardStore((s) => s.activePreset);
   const sortBy = useDashboardStore((s) => s.sortBy);
   const sortOrder = useDashboardStore((s) => s.sortOrder);
   const setSort = useDashboardStore((s) => s.setSort);
@@ -95,7 +96,9 @@ export function PropertyTable() {
         <Search className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
         <h2 className="text-h2 text-text-primary mb-2">Ничего не найдено</h2>
         <p className="text-body text-text-secondary mb-4">
-          Попробуйте изменить фильтры или сбросить поиск
+          {activePreset
+            ? "Текущая подборка вместе с дополнительными фильтрами не дала совпадений."
+            : "Попробуйте изменить фильтры или сбросить поиск"}
         </p>
         <button
           onClick={resetFilters}

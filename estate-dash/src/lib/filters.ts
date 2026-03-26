@@ -1,5 +1,23 @@
-import { Property, DashboardFilters } from "./types";
+import { Property, DashboardFilters, DashboardPreset } from "./types";
 import { parsePrice, parseCommission } from "./utils";
+
+export const DASHBOARD_PRESETS: Record<
+  DashboardPreset,
+  { title: string; description: string }
+> = {
+  "soft-entry": {
+    title: "Мягкий вход",
+    description: "Объекты с более понятным входом через ипотеку или рассрочку.",
+  },
+  "fast-delivery": {
+    title: "Быстрая сдача",
+    description: "Проекты со сдачей сейчас или в ближайшем горизонте.",
+  },
+  "high-commission": {
+    title: "Высокая комиссия",
+    description: "Подборка объектов с более сильным агентским upside.",
+  },
+};
 
 // ── Filter normalization rules ──────────────────────────────────────────
 
@@ -72,6 +90,65 @@ function normalizeMortgage(raw: string | undefined | null): string[] {
   if (lower === "да" || lower === "yes" || lower.startsWith("да ") || lower.startsWith("да(")) return ["Да"];
   if (lower === "нет") return ["Нет"];
   return ["Условно"];
+}
+
+function hasInstallmentLanguage(raw: string | undefined | null): boolean {
+  if (!raw || !raw.trim()) return false;
+
+  const lower = raw.toLowerCase();
+  return ["рассроч", "пв", "взнос", "installment", "down payment"].some(
+    (fragment) => lower.includes(fragment)
+  );
+}
+
+function isSoftEntryProperty(property: Property): boolean {
+  const mortgageGroups = normalizeMortgage(property.mortgage);
+  const hasFriendlyMortgage = mortgageGroups.some((group) =>
+    ["Да", "Самостоятельно", "К началу года"].includes(group)
+  );
+  const hasInstallment = hasInstallmentLanguage(property.paymentTerms);
+  const price = parsePrice(property.minPricePerSqm ?? "");
+  const avoidsPremiumOutlier = price === null || price <= 3000;
+
+  return (hasFriendlyMortgage || hasInstallment) && avoidsPremiumOutlier;
+}
+
+function isFastDeliveryProperty(property: Property): boolean {
+  const groups = normalizeFilterValue("deliveryYear", property.deliveryYear);
+  return groups.some((group) => ["Сдан", "2025", "2026"].includes(group));
+}
+
+function isHighCommissionProperty(property: Property): boolean {
+  const commission = parseCommission(property.commissionNet);
+  return commission !== null && commission >= 5;
+}
+
+export function matchesPreset(property: Property, preset: DashboardPreset): boolean {
+  switch (preset) {
+    case "soft-entry":
+      return isSoftEntryProperty(property);
+    case "fast-delivery":
+      return isFastDeliveryProperty(property);
+    case "high-commission":
+      return isHighCommissionProperty(property);
+    default:
+      return true;
+  }
+}
+
+export function applyPresetFilter(
+  properties: Property[],
+  preset: DashboardPreset | null
+): Property[] {
+  if (!preset) return properties;
+  return properties.filter((property) => matchesPreset(property, preset));
+}
+
+export function getPresetMatchCount(
+  properties: Property[],
+  preset: DashboardPreset
+): number {
+  return applyPresetFilter(properties, preset).length;
 }
 
 export function normalizeFilterValue(field: string, raw: string | undefined | null): string[] {

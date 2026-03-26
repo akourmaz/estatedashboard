@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronDown, X, Search } from "lucide-react";
 import { useDashboardStore } from "@/stores/dashboard-store";
+import { PresetPicks } from "./PresetPicks";
 import { getUniqueValues, hasActiveFilters } from "@/lib/filters";
 
 interface MultiSelectDropdownProps {
@@ -107,6 +108,7 @@ function MultiSelectDropdown({
 export function FilterPanel() {
   const properties = useDashboardStore((s) => s.properties);
   const filters = useDashboardStore((s) => s.filters);
+  const activePreset = useDashboardStore((s) => s.activePreset);
   const setFilter = useDashboardStore((s) => s.setFilter);
   const resetFilters = useDashboardStore((s) => s.resetFilters);
   const searchQuery = useDashboardStore((s) => s.searchQuery);
@@ -137,7 +139,7 @@ export function FilterPanel() {
     [properties]
   );
 
-  const filtersActive = hasActiveFilters(filters) || searchQuery.length > 0;
+  const filtersActive = hasActiveFilters(filters) || searchQuery.length > 0 || activePreset !== null;
 
   if (properties.length === 0) return null;
 
@@ -167,6 +169,7 @@ export function FilterPanel() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
+      <PresetPicks />
       <MultiSelectDropdown
         label="Локация"
         options={locations}

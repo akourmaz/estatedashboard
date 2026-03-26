@@ -93,6 +93,8 @@ export interface DashboardFilters {
   commissionRange: { min: number | null; max: number | null };
 }
 
+export type DashboardPreset = "soft-entry" | "fast-delivery" | "high-commission";
+
 export const DEFAULT_FILTERS: DashboardFilters = {
   locations: [],
   developers: [],

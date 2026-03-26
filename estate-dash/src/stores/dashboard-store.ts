@@ -1,8 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useMemo } from "react";
-import { Property, DashboardFilters, DEFAULT_FILTERS, SortOrder } from "@/lib/types";
-import { filterProperties, sortProperties } from "@/lib/filters";
+import {
+  Property,
+  DashboardFilters,
+  DEFAULT_FILTERS,
+  SortOrder,
+  DashboardPreset,
+} from "@/lib/types";
+import { applyPresetFilter, filterProperties, sortProperties } from "@/lib/filters";
 import catalogProperties from "@/data/catalog";
 
 interface DashboardState {
@@ -18,10 +24,13 @@ interface DashboardState {
 
   // Filters
   filters: DashboardFilters;
+  activePreset: DashboardPreset | null;
   setFilter: <K extends keyof DashboardFilters>(
     key: K,
     value: DashboardFilters[K]
   ) => void;
+  applyPreset: (preset: DashboardPreset) => void;
+  clearPreset: () => void;
   resetFilters: () => void;
 
   // Sort
@@ -50,11 +59,28 @@ export const useDashboardStore = create<DashboardState>()(
 
       // Filters
       filters: { ...DEFAULT_FILTERS },
+      activePreset: null,
       setFilter: (key, value) =>
         set((state) => ({
           filters: { ...state.filters, [key]: value },
         })),
-      resetFilters: () => set({ filters: { ...DEFAULT_FILTERS }, searchQuery: "" }),
+      applyPreset: (preset) =>
+        set((state) => {
+          const nextPreset = state.activePreset === preset ? null : preset;
+
+          return {
+            filters: { ...DEFAULT_FILTERS },
+            searchQuery: "",
+            activePreset: nextPreset,
+          };
+        }),
+      clearPreset: () => set({ activePreset: null }),
+      resetFilters: () =>
+        set({
+          filters: { ...DEFAULT_FILTERS },
+          searchQuery: "",
+          activePreset: null,
+        }),
 
       // Sort
       sortBy: "developer",
@@ -115,13 +141,15 @@ export const useDashboardStore = create<DashboardState>()(
  */
 export function useFilteredProperties(): Property[] {
   const properties = useDashboardStore((s) => s.properties);
+  const activePreset = useDashboardStore((s) => s.activePreset);
   const filters = useDashboardStore((s) => s.filters);
   const searchQuery = useDashboardStore((s) => s.searchQuery);
   const sortBy = useDashboardStore((s) => s.sortBy);
   const sortOrder = useDashboardStore((s) => s.sortOrder);
 
   return useMemo(() => {
-    const filtered = filterProperties(properties, filters, searchQuery);
+    const presetFiltered = applyPresetFilter(properties, activePreset);
+    const filtered = filterProperties(presetFiltered, filters, searchQuery);
     return sortProperties(filtered, sortBy, sortOrder);
-  }, [properties, filters, searchQuery, sortBy, sortOrder]);
+  }, [properties, activePreset, filters, searchQuery, sortBy, sortOrder]);
 }
