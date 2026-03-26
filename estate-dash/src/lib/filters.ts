@@ -1,6 +1,90 @@
 import { Property, DashboardFilters } from "./types";
 import { parsePrice, parseCommission } from "./utils";
 
+// ── Filter normalization rules ──────────────────────────────────────────
+
+const PROPERTY_TYPE_RULES = [
+  { canonical: "Апартаменты", matchers: ["апартамент"] },
+  { canonical: "Жилой", matchers: ["жилой"] },
+  { canonical: "Вилла", matchers: ["вилл"] },
+  { canonical: "Таунхаус", matchers: ["таунхаус", "тх"] },
+  { canonical: "Отель", matchers: ["отель", "брендирован", "резиденц"] },
+];
+
+const FINISHING_RULES = [
+  { canonical: "BF", matchers: ["bf", "без ремонта"] },
+  { canonical: "WF", matchers: ["wf"] },
+  { canonical: "GF", matchers: ["gf"] },
+  { canonical: "PF", matchers: ["pf"] },
+  { canonical: "Turnkey", matchers: ["turnkey", "с ремонтом"] },
+];
+
+const DELIVERY_YEAR_HANDED_OVER = ["сдано", "сдан", "готов", "частично сдано", "2024", "2025"];
+
+function normalizePropertyType(raw: string): string[] {
+  const lower = raw.toLowerCase();
+  const groups: string[] = [];
+  for (const rule of PROPERTY_TYPE_RULES) {
+    if (rule.matchers.some((m) => lower.includes(m))) {
+      groups.push(rule.canonical);
+    }
+  }
+  return groups.length > 0 ? groups : [raw];
+}
+
+function normalizeFinishing(raw: string): string[] {
+  const lower = raw.toLowerCase();
+  const groups: string[] = [];
+  for (const rule of FINISHING_RULES) {
+    if (rule.matchers.some((m) => lower.includes(m))) {
+      groups.push(rule.canonical);
+    }
+  }
+  return groups.length > 0 ? groups : [raw];
+}
+
+function normalizeDeliveryYear(raw: string): string[] {
+  const lower = raw.toLowerCase().trim();
+  if (DELIVERY_YEAR_HANDED_OVER.includes(lower)) return ["Сдан"];
+
+  // Extract all 4-digit years from compound values like "Блок А 2025\r\nБлок B 2026"
+  const yearMatches = raw.match(/\b(20\d{2})\b/g);
+  if (yearMatches && yearMatches.length > 0) {
+    const groups = new Set<string>();
+    for (const y of yearMatches) {
+      if (DELIVERY_YEAR_HANDED_OVER.includes(y)) {
+        groups.add("Сдан");
+      } else {
+        groups.add(y);
+      }
+    }
+    return Array.from(groups);
+  }
+
+  return [raw];
+}
+
+function normalizeMortgage(raw: string | undefined | null): string[] {
+  if (!raw || !raw.trim()) return ["Нет"];
+  const lower = raw.toLowerCase().trim();
+  if (lower.includes("планируется")) return ["К началу года"];
+  if (lower.includes("самостоятельно")) return ["Самостоятельно"];
+  if (lower === "да" || lower === "yes" || lower.startsWith("да ") || lower.startsWith("да(")) return ["Да"];
+  if (lower === "нет") return ["Нет"];
+  return ["Условно"];
+}
+
+export function normalizeFilterValue(field: string, raw: string | undefined | null): string[] {
+  if (field === "mortgage") return normalizeMortgage(raw);
+  if (!raw || !raw.trim()) return [];
+  switch (field) {
+    case "propertyType": return normalizePropertyType(raw);
+    case "finishing": return normalizeFinishing(raw);
+    case "deliveryYear": return normalizeDeliveryYear(raw);
+    default: return [raw];
+  }
+}
+
 /**
  * Apply all filters and search query to properties array.
  */
@@ -53,28 +137,31 @@ export function filterProperties(
   }
 
   if (filters.propertyTypes.length > 0) {
-    result = result.filter((p) =>
-      filters.propertyTypes.includes(p.propertyType)
-    );
+    result = result.filter((p) => {
+      const groups = normalizeFilterValue("propertyType", p.propertyType);
+      return groups.some((g) => filters.propertyTypes.includes(g));
+    });
   }
 
   if (filters.finishings.length > 0) {
-    result = result.filter((p) => filters.finishings.includes(p.finishing));
+    result = result.filter((p) => {
+      const groups = normalizeFilterValue("finishing", p.finishing);
+      return groups.some((g) => filters.finishings.includes(g));
+    });
   }
 
   if (filters.deliveryYears.length > 0) {
-    result = result.filter((p) =>
-      filters.deliveryYears.includes(p.deliveryYear)
-    );
+    result = result.filter((p) => {
+      const groups = normalizeFilterValue("deliveryYear", p.deliveryYear);
+      return groups.some((g) => filters.deliveryYears.includes(g));
+    });
   }
 
   // Mortgage filter
-  if (filters.mortgage !== null) {
+  if (filters.mortgage.length > 0) {
     result = result.filter((p) => {
-      if (!p.mortgage) return false;
-      const hasMortgage =
-        p.mortgage.toLowerCase() === "да" || p.mortgage.toLowerCase() === "yes";
-      return filters.mortgage === "Да" ? hasMortgage : !hasMortgage;
+      const groups = normalizeFilterValue("mortgage", p.mortgage);
+      return groups.some((g) => filters.mortgage.includes(g));
     });
   }
 
@@ -154,20 +241,41 @@ export function sortProperties(
   return sorted;
 }
 
+const NORMALIZED_FIELDS = ["propertyType", "finishing", "deliveryYear", "mortgage"];
+
 /**
- * Get unique values for a given field from properties array.
+ * Get unique canonical values for a given field from properties array.
+ * For normalized fields, returns canonical group names instead of raw values.
  */
 export function getUniqueValues(
   properties: Property[],
   field: keyof Property
 ): string[] {
   const values = new Set<string>();
-  properties.forEach((p) => {
-    const val = p[field];
-    if (val && typeof val === "string" && val.trim()) {
-      values.add(val.trim());
-    }
-  });
+
+  if (NORMALIZED_FIELDS.includes(field)) {
+    properties.forEach((p) => {
+      const raw = p[field];
+      const groups = normalizeFilterValue(field, raw as string);
+      groups.forEach((g) => values.add(g));
+    });
+  } else {
+    properties.forEach((p) => {
+      const val = p[field];
+      if (val && typeof val === "string" && val.trim()) {
+        values.add(val.trim());
+      }
+    });
+  }
+
+  if (field === "deliveryYear") {
+    return Array.from(values).sort((a, b) => {
+      if (a === "Сдан") return -1;
+      if (b === "Сдан") return 1;
+      return a.localeCompare(b, "ru");
+    });
+  }
+
   return Array.from(values).sort((a, b) => a.localeCompare(b, "ru"));
 }
 
@@ -181,7 +289,7 @@ export function hasActiveFilters(filters: DashboardFilters): boolean {
     filters.propertyTypes.length > 0 ||
     filters.finishings.length > 0 ||
     filters.deliveryYears.length > 0 ||
-    filters.mortgage !== null ||
+    filters.mortgage.length > 0 ||
     filters.priceRange.min !== null ||
     filters.priceRange.max !== null ||
     filters.commissionRange.min !== null ||
@@ -199,7 +307,7 @@ export function countActiveFilters(filters: DashboardFilters): number {
   count += filters.propertyTypes.length;
   count += filters.finishings.length;
   count += filters.deliveryYears.length;
-  if (filters.mortgage !== null) count++;
+  count += filters.mortgage.length;
   if (filters.priceRange.min !== null || filters.priceRange.max !== null)
     count++;
   if (

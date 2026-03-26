@@ -131,6 +131,10 @@ export function FilterPanel() {
     () => getUniqueValues(properties, "deliveryYear"),
     [properties]
   );
+  const mortgageOptions = useMemo(
+    () => getUniqueValues(properties, "mortgage"),
+    [properties]
+  );
 
   const filtersActive = hasActiveFilters(filters) || searchQuery.length > 0;
 
@@ -191,6 +195,12 @@ export function FilterPanel() {
         options={deliveryYears}
         selected={filters.deliveryYears}
         onChange={(v) => setFilter("deliveryYears", v)}
+      />
+      <MultiSelectDropdown
+        label="Ипотека"
+        options={mortgageOptions}
+        selected={filters.mortgage}
+        onChange={(v) => setFilter("mortgage", v)}
       />
 
       {filtersActive && (

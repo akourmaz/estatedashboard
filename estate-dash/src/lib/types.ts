@@ -88,7 +88,7 @@ export interface DashboardFilters {
   propertyTypes: string[];
   finishings: string[];
   deliveryYears: string[];
-  mortgage: string | null;
+  mortgage: string[];
   priceRange: { min: number | null; max: number | null };
   commissionRange: { min: number | null; max: number | null };
 }
@@ -99,7 +99,7 @@ export const DEFAULT_FILTERS: DashboardFilters = {
   propertyTypes: [],
   finishings: [],
   deliveryYears: [],
-  mortgage: null,
+  mortgage: [],
   priceRange: { min: null, max: null },
   commissionRange: { min: null, max: null },
 };
