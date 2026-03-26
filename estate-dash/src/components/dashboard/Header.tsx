@@ -66,19 +66,19 @@ export function Header() {
         }`}
       >
         {/* Brand toolbar */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-accent-primary select-none">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-nowrap overflow-hidden whitespace-nowrap">
+          <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-accent-primary select-none flex-shrink-0">
             ESTATEDASH
           </span>
 
           <Dot />
           <span className="text-[14px] text-text-primary">
-            Alexey Kurmaz
+            <span className="hidden sm:inline">Alexey </span>Kurmaz
           </span>
 
           <Dot />
           <span className="text-[14px] text-text-secondary">
-            SoldOut Team
+            SoldOut<span className="hidden sm:inline"> Team</span>
           </span>
 
           <Dot />

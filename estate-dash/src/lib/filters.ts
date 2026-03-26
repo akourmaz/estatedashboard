@@ -158,7 +158,7 @@ export function filterProperties(
   }
 
   // Mortgage filter
-  if (filters.mortgage.length > 0) {
+  if (filters.mortgage?.length > 0) {
     result = result.filter((p) => {
       const groups = normalizeFilterValue("mortgage", p.mortgage);
       return groups.some((g) => filters.mortgage.includes(g));
@@ -289,7 +289,7 @@ export function hasActiveFilters(filters: DashboardFilters): boolean {
     filters.propertyTypes.length > 0 ||
     filters.finishings.length > 0 ||
     filters.deliveryYears.length > 0 ||
-    filters.mortgage.length > 0 ||
+    (filters.mortgage?.length ?? 0) > 0 ||
     filters.priceRange.min !== null ||
     filters.priceRange.max !== null ||
     filters.commissionRange.min !== null ||
@@ -307,7 +307,7 @@ export function countActiveFilters(filters: DashboardFilters): number {
   count += filters.propertyTypes.length;
   count += filters.finishings.length;
   count += filters.deliveryYears.length;
-  count += filters.mortgage.length;
+  count += filters.mortgage?.length ?? 0;
   if (filters.priceRange.min !== null || filters.priceRange.max !== null)
     count++;
   if (

@@ -15,9 +15,10 @@ interface MultiSelectDropdownProps {
 function MultiSelectDropdown({
   label,
   options,
-  selected,
+  selected: selectedRaw,
   onChange,
 }: MultiSelectDropdownProps) {
+  const selected = selectedRaw ?? [];
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
